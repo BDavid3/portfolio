@@ -1,6 +1,6 @@
 --- Portfolio Tracker ---
 
-Here you can find my ongoing investments. It calculates the:
+Here you can find my ongoing investments. It calculates:
 - the current amount of shares held
 - the avarage 1 share price
 - the net invested value(which is the deposited money)
