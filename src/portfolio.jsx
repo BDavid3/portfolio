@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 
+// --- Constants ---
 const SHARES_HELD = 6.48858005;
 const NET_INVESTED = 956.00;
 const AVG_BUY_PRICE = 147.95;
-const API_KEY = "UI8H46XFGLRLSKZZ";
+const API_KEY = "UI8H46XFGLRLSKZZ"; 
 
 const styles = {
   page: {
@@ -37,6 +38,7 @@ const styles = {
     color: "#fff",
     margin: "1.5rem 0 0.5rem",
     letterSpacing: "-1px",
+    textAlign: "center",
   },
   grid: {
     display: "grid",
@@ -68,11 +70,22 @@ const styles = {
     borderRadius: "8px",
     padding: "1.25rem",
     gridColumn: "span 2",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",    // Centers horizontally
+    justifyContent: "center", // Centers vertically
   }),
   profitValue: (isProfit) => ({
     fontSize: "2rem",
     fontWeight: "bold",
     color: isProfit ? "#00c853" : "#ff3d3d",
+    textAlign: "center",
+    margin: 0, 
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    justifyContent: "center",
   }),
   badge: (isProfit) => ({
     display: "inline-block",
@@ -97,11 +110,13 @@ const styles = {
     color: "#555",
     letterSpacing: "0.1em",
     marginTop: "0.25rem",
+    textAlign: "center",
   },
   error: {
     fontSize: "0.8rem",
-    color: "#ff3d3d",
+    color: "#ffca28", // Changed to amber to signify "Warning/Cached" rather than "Fatal"
     marginTop: "0.5rem",
+    textAlign: "center",
   },
   divider: {
     border: "none",
@@ -111,8 +126,14 @@ const styles = {
 };
 
 function Portfolio() {
-  const [price, setPrice] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // 1. Initial State pulls from localStorage so the weekend data is immediately available
+  const [price, setPrice] = useState(() => {
+    const saved = localStorage.getItem("vwce_last_price");
+    return saved ? parseFloat(saved) : null;
+  });
+  
+  const [lastUpdate, setLastUpdate] = useState(localStorage.getItem("vwce_last_date") || "Never");
+  const [loading, setLoading] = useState(!price); // Only show loading if we have NO cached price
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -121,32 +142,43 @@ function Portfolio() {
         .then(res => res.json())
         .then(data => {
           const quote = data["Global Quote"];
-          if (!quote || !quote["05. price"]) {
-            setError("Market closed — last known price shown");
-            setLoading(false);
-            return;
+          
+          if (quote && quote["05. price"]) {
+            const livePrice = parseFloat(quote["05. price"]);
+            const timeString = new Date().toLocaleString();
+            
+            // 2. Update State
+            setPrice(livePrice);
+            setLastUpdate(timeString);
+            
+            // 3. Persist to localStorage
+            localStorage.setItem("vwce_last_price", livePrice.toString());
+            localStorage.setItem("vwce_last_date", timeString);
+            
+            setError(null);
+          } else {
+            // Market is likely closed or rate limit hit
+            setError("Market closed — showing last recorded data");
           }
-          const livePrice = parseFloat(quote["05. price"]);
-          setPrice(livePrice);
           setLoading(false);
-          setError(null);
         })
         .catch(() => {
-          setError("Could not fetch price.");
+          setError("Sync failed — showing cached data");
           setLoading(false);
         });
     };
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 300000);
+    const interval = setInterval(fetchPrice, 300000); // 5 minute sync
     return () => clearInterval(interval);
   }, []);
 
-  const currentValue = price ? price * SHARES_HELD : null;
-  const profit = currentValue ? currentValue - NET_INVESTED : null;
-  const profitPercent = profit ? (profit / NET_INVESTED * 100).toFixed(2) : null;
-  const isProfit = profit > 0;
-  const priceVsAvg = price ? price - AVG_BUY_PRICE : null;
+  // --- Calculations ---
+  const currentValue = price ? price * SHARES_HELD : 0;
+  const profit = price ? currentValue - NET_INVESTED : 0;
+  const profitPercent = price ? ((profit / NET_INVESTED) * 100).toFixed(2) : "0.00";
+  const isProfit = profit >= 0;
+  const priceVsAvg = price ? price - AVG_BUY_PRICE : 0;
 
   return (
     <div style={styles.page}>
@@ -162,15 +194,17 @@ function Portfolio() {
         <h1 style={styles.title}>Vanguard FTSE All-World</h1>
       </div>
 
-      {loading && <p style={{ color: "#555" }}>Fetching live price...</p>}
+      {loading && <p style={{ color: "#555" }}>Initializing terminal...</p>}
       {error && <p style={styles.error}>⚠ {error}</p>}
 
       {price && (
         <>
           <div>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <span style={styles.dot}></span>
-              <span style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.1em" }}>LIVE PRICE</span>
+            <div style={{ display: "flex", alignItems: "center" , justifyContent: "center"}}>
+              <span style={{...styles.dot, backgroundColor: error ? "#555" : "#00c853"}}></span>
+              <span style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.1em" }}>
+                {error ? "CACHED PRICE" : "LIVE PRICE"} (Sync: {lastUpdate})
+              </span>
             </div>
             <div style={styles.livePrice}>€{price.toFixed(2)}</div>
             <p style={styles.status}>
