@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 // --- Constants ---
 const SHARES_HELD = 6.48858005;
-const NET_INVESTED = 956.00;
+const NET_INVESTED = 959.00;
 const AVG_BUY_PRICE = 147.95;
 const API_KEY = "UI8H46XFGLRLSKZZ"; 
 
@@ -125,6 +125,77 @@ const styles = {
   }
 };
 
+function ParticleBackground() {
+  useEffect(() => {
+    const canvas = document.getElementById("particles");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.5 + 0.5,
+      speedX: (Math.random() - 0.5) * 0.4,
+      speedY: (Math.random() - 0.5) * 0.4,
+      opacity: Math.random() * 0.5 + 0.1,
+    }));
+
+    let animationId;
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(p => {
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        // wrap around edges
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0, 200, 83, ${p.opacity})`;
+        ctx.fill();
+      });
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      id="particles"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 0,
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
 function Portfolio() {
   // 1. Initial State pulls from localStorage so the weekend data is immediately available
   const [price, setPrice] = useState(() => {
@@ -181,7 +252,10 @@ function Portfolio() {
   const priceVsAvg = price ? price - AVG_BUY_PRICE : 0;
 
   return (
-    <div style={styles.page}>
+  <div style={styles.page}>
+    <ParticleBackground />
+
+    <div style={{ position: "relative", zIndex: 1 }}>
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -191,7 +265,7 @@ function Portfolio() {
 
       <div style={styles.header}>
         <p style={styles.ticker}>VWCE · XETRA · EUR</p>
-        <h1 style={styles.title}>Vanguard FTSE All-World</h1>
+        <h1 style={styles.title}>Gobma's Vanguard FTSE All-World investment</h1>
       </div>
 
       {loading && <p style={{ color: "#555" }}>Initializing terminal...</p>}
@@ -251,7 +325,8 @@ function Portfolio() {
         </>
       )}
     </div>
-  );
+  </div>
+);
 }
 
 export default Portfolio;
