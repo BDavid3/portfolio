@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import "./App.css";
 
 // --- MY FIXED DATA ---
-const MY_SHARES = 6.48858005;
-const MY_AVG_PRICE = 147.95;
+const MY_SHARES = 7.4702111;
+const MY_AVG_PRICE = 148.68;
 const TICKER = "VWCE:XETR";
-const API_KEY = import.meta.env.VITE_API_KEY; // Load from .env file
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 function App() {
 
-  // [value, functionToUpdateValue] = useState(startingValue)
   const [currentPrice, setCurrentPrice] = useState(() => {
     const saved = localStorage.getItem('lastPrice');
     return saved ? parseFloat(saved) : 0;
@@ -17,14 +16,17 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPrice = async () =>{
+    const fetchPrice = async () => {
       const now = Date.now();
       const lastFetch = localStorage.getItem('lastFetchTime');
       const cachedPrice = localStorage.getItem('lastPrice');
-      const twoMinutes = 60 * 60 * 1000;
 
-      if (lastFetch && (now - Number(lastFetch) < twoMinutes)) {
-        console.log("Using cached price...");
+      // ✅ Cache until end of day instead of 1 hour
+      const sameDay = lastFetch &&
+        new Date(Number(lastFetch)).toDateString() === new Date(now).toDateString();
+
+      if (sameDay && cachedPrice) {
+        console.log("Using cached price (same day)...");
         setCurrentPrice(parseFloat(cachedPrice));
         setLoading(false);
         return;
@@ -52,7 +54,7 @@ function App() {
     };
 
     fetchPrice();
-  }, []); // run this once when the page loads
+  }, []);
 
   // Calculations
   const totalCost = MY_SHARES * MY_AVG_PRICE;
@@ -86,9 +88,14 @@ function App() {
         <div className="big-number">€{currentValue.toFixed(2)}</div>
 
         <div className={`pl-badge ${profitLoss >= 0 ? 'profit' : 'loss'}`}>
-          {profitLoss >= 0 ? '▲' : '▼'} 
+          {profitLoss >= 0 ? '▲' : '▼'}
           €{Math.abs(profitLoss).toFixed(2)} ({plPercentage.toFixed(2)}%)
         </div>
+
+        <p className="update-note">
+          ⏱ Price updates once per day after market close (XETRA)
+        </p>
+
       </div>
     </div>
   )
